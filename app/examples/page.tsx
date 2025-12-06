@@ -2,6 +2,8 @@ import SupabaseClientExample from './client-example'
 import SupabaseServerExample from './server-example'
 import ServerActionExample from './server-action-example'
 
+export const dynamic = "force-dynamic";
+
 /**
  * Página de ejemplos de Supabase
  * 

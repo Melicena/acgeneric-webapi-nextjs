@@ -1,0 +1,10 @@
+# Dockerfile
+
+# Configurar node_modules en .dockerignore
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+README.md
+.next
+.git

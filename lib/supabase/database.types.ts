@@ -196,6 +196,49 @@ export interface Database {
                     }
                 ]
             }
+            associations: {
+                Row: {
+                    id: string
+                    nombre: string
+                    descripcion: string | null
+                    logo_url: string | null
+                    admin_user_id: string
+                    comercios_ids: string[]
+                    activa: boolean
+                    created_at: string
+                    updated_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    nombre: string
+                    descripcion?: string | null
+                    logo_url?: string | null
+                    admin_user_id: string
+                    comercios_ids?: string[]
+                    activa?: boolean
+                    created_at?: string
+                    updated_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    nombre?: string
+                    descripcion?: string | null
+                    logo_url?: string | null
+                    admin_user_id?: string
+                    comercios_ids?: string[]
+                    activa?: boolean
+                    created_at?: string
+                    updated_at?: string | null
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "associations_admin_user_id_fkey"
+                        columns: ["admin_user_id"]
+                        referencedRelation: "usuarios"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
         }
         Views: {
             [_ in never]: never

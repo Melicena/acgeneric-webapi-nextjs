@@ -23,16 +23,43 @@ export interface NoticiaModel {
     createdAt: string
 }
 
+// Roles de usuario
+export const UserRoles = {
+    USUARIO: 'usuario',
+    NEGOCIO: 'negocio',
+    ASOCIACION_ADMIN: 'asociacion_admin'
+} as const
+
+export type UserRole = typeof UserRoles[keyof typeof UserRoles]
+
+export interface AsociacionModel {
+    id: string
+    nombre: string
+    descripcion: string | null
+    logoUrl: string | null
+    adminUserId: string
+    comerciosIds: string[]
+    activa: boolean
+    createdAt: string
+    updatedAt: string | null
+}
+
 export interface UsuarioModel {
     id: string
     email: string
     displayName: string | null
     avatarUrl: string | null
-    rol: string
-    comercios: any
-    comerciosSubs: any
+    rol: UserRole
+    comercios: string[] | null
+    comerciosSubs: Record<string, boolean> | null
+    token: string | null
     ultimoAcceso: string | null
     createdAt: string
+    /**
+     * Lista de asociaciones que administra este usuario
+     * (Cargado mediante JOIN con associations donde admin_user_id = user.id)
+     */
+    managedAssociations: AsociacionModel[] | null
 }
 
 export interface OfertaModel {
@@ -90,17 +117,56 @@ export const NoticiaMapper = {
     })
 }
 
+export const AsociacionMapper = {
+    toDomain: (row: Tables<'associations'>): AsociacionModel => ({
+        id: row.id,
+        nombre: row.nombre,
+        descripcion: row.descripcion,
+        logoUrl: row.logo_url,
+        adminUserId: row.admin_user_id,
+        comerciosIds: Array.isArray(row.comercios_ids) ? row.comercios_ids as string[] : [],
+        activa: row.activa ?? true,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+    }),
+
+    toDbInsert: (model: Partial<AsociacionModel>): InsertDto<'associations'> => ({
+        // @ts-ignore
+        nombre: model.nombre!,
+        descripcion: model.descripcion,
+        logo_url: model.logoUrl,
+        admin_user_id: model.adminUserId!,
+        comercios_ids: model.comerciosIds || [],
+        activa: model.activa ?? true
+    })
+}
+
 export const UsuarioMapper = {
-    toDomain: (row: Tables<'usuarios'>): UsuarioModel => ({
+    toDomain: (row: Tables<'usuarios'>, managedAssociations?: AsociacionModel[]): UsuarioModel => ({
         id: row.id,
         email: row.email,
         displayName: row.display_name || row.nombre,
         avatarUrl: row.avatar_url,
-        rol: row.rol || 'CLIENTE',
-        comercios: row.comercios,
-        comerciosSubs: row.comercios_subs,
+        rol: (row.rol || UserRoles.USUARIO) as UserRole,
+        comercios: Array.isArray(row.comercios) ? row.comercios as string[] : null,
+        comerciosSubs: row.comercios_subs ? row.comercios_subs as Record<string, boolean> : null,
+        token: row.token,
         ultimoAcceso: row.ultimo_acceso,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        managedAssociations: managedAssociations || null
+    }),
+
+    toDbInsert: (model: Partial<UsuarioModel>): InsertDto<'usuarios'> => ({
+        // @ts-ignore
+        id: model.id,
+        email: model.email!,
+        display_name: model.displayName,
+        avatar_url: model.avatarUrl,
+        rol: model.rol || UserRoles.USUARIO,
+        comercios: model.comercios,
+        comercios_subs: model.comerciosSubs,
+        token: model.token,
+        ultimo_acceso: model.ultimoAcceso
     })
 }
 

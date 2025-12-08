@@ -1,0 +1,146 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { AsociacionMapper, UserRoles, type AsociacionModel } from '@/lib/types'
+
+/**
+ * GET /api/associations
+ * Lista todas las asociaciones activas
+ * Query params:
+ * - adminUserId: Filtrar por administrador
+ * - activa: Filtrar por estado (true/false)
+ */
+export async function GET(request: NextRequest) {
+    try {
+        const supabase = createClient()
+        const searchParams = request.nextUrl.searchParams
+        
+        const adminUserId = searchParams.get('adminUserId')
+        const activa = searchParams.get('activa')
+
+        let query = supabase
+            .from('associations')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+        // Aplicar filtros
+        if (adminUserId) {
+            query = query.eq('admin_user_id', adminUserId)
+        }
+
+        if (activa !== null) {
+            query = query.eq('activa', activa === 'true')
+        }
+
+        const { data: associations, error } = await query
+
+        if (error) {
+            return NextResponse.json(
+                { error: 'Error al obtener asociaciones', details: error.message },
+                { status: 400 }
+            )
+        }
+
+        // Mapear a modelos de dominio
+        const associationsModels = associations?.map(AsociacionMapper.toDomain) || []
+
+        return NextResponse.json({
+            success: true,
+            data: associationsModels,
+            meta: {
+                total: associationsModels.length
+            }
+        })
+
+    } catch (error) {
+        console.error('Error en GET /api/associations:', error)
+        return NextResponse.json(
+            { error: 'Error interno del servidor' },
+            { status: 500 }
+        )
+    }
+}
+
+/**
+ * POST /api/associations
+ * Crea una nueva asociación
+ * Body:
+ * {
+ *   nombre: string
+ *   descripcion?: string
+ *   logoUrl?: string
+ *   comerciosIds: string[]
+ * }
+ */
+export async function POST(request: NextRequest) {
+    try {
+        const supabase = createClient()
+        const body = await request.json()
+
+        // Obtener el usuario autenticado
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError || !user) {
+            return NextResponse.json(
+                { error: 'No autenticado' },
+                { status: 401 }
+            )
+        }
+
+        // Validar datos requeridos
+        if (!body.nombre) {
+            return NextResponse.json(
+                { error: 'El nombre es requerido' },
+                { status: 400 }
+            )
+        }
+
+        // Crear la asociación
+        const { data: association, error: createError } = await supabase
+            .from('associations')
+            .insert({
+                nombre: body.nombre,
+                descripcion: body.descripcion || null,
+                logo_url: body.logoUrl || null,
+                admin_user_id: user.id,
+                comercios_ids: body.comerciosIds || [],
+                activa: true
+            })
+            .select()
+            .single()
+
+        if (createError) {
+            return NextResponse.json(
+                { error: 'Error al crear asociación', details: createError.message },
+                { status: 400 }
+            )
+        }
+
+        // Actualizar el rol del usuario a asociacion_admin si no lo es
+        const { error: updateRolError } = await supabase
+            .from('usuarios')
+            .update({ rol: UserRoles.ASOCIACION_ADMIN })
+            .eq('id', user.id)
+            .neq('rol', UserRoles.ASOCIACION_ADMIN)
+
+        if (updateRolError) {
+            console.error('Error al actualizar rol:', updateRolError)
+            // No fallar si hay error al actualizar el rol
+        }
+
+        // Mapear a modelo de dominio
+        const associationModel = AsociacionMapper.toDomain(association)
+
+        return NextResponse.json({
+            success: true,
+            data: associationModel,
+            message: 'Asociación creada correctamente'
+        }, { status: 201 })
+
+    } catch (error) {
+        console.error('Error en POST /api/associations:', error)
+        return NextResponse.json(
+            { error: 'Error interno del servidor' },
+            { status: 500 }
+        )
+    }
+}

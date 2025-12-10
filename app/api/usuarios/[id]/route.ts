@@ -35,149 +35,70 @@ export async function GET(
             return NextResponse.json({ data: usuarioExistente })
         }
 
-        // 2. Si no existe (PGRST116), intentar recuperarlo de Auth y crearlo
-        if (error && error.code === 'PGRST116') {
-            console.log(`Usuario ${id} no encontrado en tabla pública. Buscando en Auth...`)
+       
 
-            // Verificar si tenemos la Service Role Key
-            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-            if (!serviceRoleKey) {
-                console.error('Falta SUPABASE_SERVICE_ROLE_KEY para sincronización automática')
-                return NextResponse.json(
-                    { error: 'Usuario no encontrado. Configure SUPABASE_SERVICE_ROLE_KEY para sincronización automática.' },
-                    { status: 404 }
-                )
-            }
-
-            // Crear cliente Admin para acceder a auth.users
-            const supabaseAdmin = createAdminClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                serviceRoleKey,
-                {
-                    auth: {
-                        autoRefreshToken: false,
-                        persistSession: false
-                    }
-                }
-            )
-
-            // Buscar usuario en Auth
-            const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.getUserById(id)
-
-            if (authError || !authUser.user) {
-                return NextResponse.json(
-                    { error: 'Usuario no encontrado ni en tabla pública ni en Auth' },
-                    { status: 404 }
-                )
-            }
-
-            // 3. Crear el usuario en la tabla pública
-            const email = authUser.user.email
-
-            if (!email) {
-                return NextResponse.json(
-                    { error: 'El usuario de Auth no tiene email' },
-                    { status: 400 }
-                )
-            }
-
-            console.log(`Usuario encontrado en Auth (${email}). Sincronizando...`)
-
-            // Intento de upsert (crear o actualizar)
-            const { data: nuevoUsuario, error: upsertError } = await supabaseAdmin
-                .from('usuarios')
-                .upsert(
-                    {
-                        id: id,
-                        email: String(email).toLowerCase()
-                    },
-                    { onConflict: 'id', returning: 'representation' }
-                )
-                .select()
-                .single();
-
-            if (upsertError) {
-                console.error('Error al upsert usuario sincronizado:', upsertError)
-                return NextResponse.json(
-                    { error: `Error al sincronizar usuario: ${upsertError.message}` },
-                    { status: 500 }
-                )
-            }
-
-            return NextResponse.json({
-                data: nuevoUsuario,
-                message: 'Usuario sincronizado desde Auth exitosamente (upsert)'
-            })
-
-            // Otros errores de base de datos
-            return NextResponse.json(
-                { error: error?.message || 'Error procesando la solicitud' },
-                { status: 500 }
-            )
-
-        } catch (error) {
-            console.error('Error al obtener usuario:', error)
-            return NextResponse.json(
-                { error: 'Error interno del servidor' },
-                { status: 500 }
-            )
-        }
+    } catch (error) {
+        console.error('Error al obtener usuario:', error)
+        return NextResponse.json(
+            { error: 'Error interno del servidor' },
+            { status: 500 }
+        )
     }
+}
 
 /**
  * PUT /api/usuarios/[id]
  * Actualiza un usuario
  */
 export async function PUT(
-        request: Request,
-        { params }: { params: Promise<{ id: string }> }
-    ) {
-        try {
-            const supabase = await createClient()
-            const { id } = await params
-            const body = await request.json()
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const supabase = await createClient()
+        const { id } = await params
+        const body = await request.json()
 
-            if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+        if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-            const { data, error } = await supabase
-                .from('usuarios')
-                .update({
-                    email: body.email,
-                    nombre: body.nombre,
-                })
-                .eq('id', id)
-                .select()
-                .single()
+        const { data, error } = await supabase
+            .from('usuarios')
+            .update({
+                email: body.email,
+                nombre: body.nombre,
+            })
+            .eq('id', id)
+            .select()
+            .single()
 
-            if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-            return NextResponse.json({ data })
-        } catch (error) {
-            return NextResponse.json({ error: 'Error interno' }, { status: 500 })
-        }
+        return NextResponse.json({ data })
+    } catch (error) {
+        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
     }
+}
 
-    /**
-     * DELETE /api/usuarios/[id]
-     * Elimina un usuario
-     */
-    export async function DELETE(
-        request: Request,
-        { params }: { params: Promise<{ id: string }> }
-    ) {
-        try {
-            const supabase = await createClient()
-            const { id } = await params
+/**
+ * DELETE /api/usuarios/[id]
+ * Elimina un usuario
+ */
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const supabase = await createClient()
+        const { id } = await params
 
-            if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+        if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-            const { error } = await supabase.from('usuarios').delete().eq('id', id)
+        const { error } = await supabase.from('usuarios').delete().eq('id', id)
 
-            if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-            return NextResponse.json({ message: 'Usuario eliminado' })
-        } catch (error) {
-            return NextResponse.json({ error: 'Error interno' }, { status: 500 })
-        }
+        return NextResponse.json({ message: 'Usuario eliminado' })
+    } catch (error) {
+        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
     }
+}

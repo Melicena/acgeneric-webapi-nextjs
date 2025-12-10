@@ -84,99 +84,100 @@ export async function GET(
 
             console.log(`Usuario encontrado en Auth (${email}). Sincronizando...`)
 
-            const { data: nuevoUsuario, error: createError } = await supabaseAdmin
+            // Intento de upsert (crear o actualizar)
+            const { data: nuevoUsuario, error: upsertError } = await supabaseAdmin
                 .from('usuarios')
-                .insert({
-                    id: id,
-                    email: email.toLowerCase(),
-                    // nombre: authUser.user.user_metadata?.full_name || null // Opcional
-                })
+                .upsert(
+                    {
+                        id: id,
+                        email: String(email).toLowerCase()
+                    },
+                    { onConflict: 'id', returning: 'representation' }
+                )
                 .select()
-                .single()
+                .single();
 
-            if (createError) {
-                console.error('Error al crear usuario sincronizado:', createError)
-                // Si falla la creación (ej. email duplicado por alguna razón), devolvemos error
+            if (upsertError) {
+                console.error('Error al upsert usuario sincronizado:', upsertError)
                 return NextResponse.json(
-                    { error: `Error al sincronizar usuario: ${createError.message}` },
+                    { error: `Error al sincronizar usuario: ${upsertError.message}` },
                     { status: 500 }
                 )
             }
 
             return NextResponse.json({
                 data: nuevoUsuario,
-                message: 'Usuario sincronizado desde Auth exitosamente'
+                message: 'Usuario sincronizado desde Auth exitosamente (upsert)'
             })
+
+            // Otros errores de base de datos
+            return NextResponse.json(
+                { error: error?.message || 'Error procesando la solicitud' },
+                { status: 500 }
+            )
+
+        } catch (error) {
+            console.error('Error al obtener usuario:', error)
+            return NextResponse.json(
+                { error: 'Error interno del servidor' },
+                { status: 500 }
+            )
         }
-
-        // Otros errores de base de datos
-        return NextResponse.json(
-            { error: error?.message || 'Error procesando la solicitud' },
-            { status: 500 }
-        )
-
-    } catch (error) {
-        console.error('Error al obtener usuario:', error)
-        return NextResponse.json(
-            { error: 'Error interno del servidor' },
-            { status: 500 }
-        )
     }
-}
 
 /**
  * PUT /api/usuarios/[id]
  * Actualiza un usuario
  */
 export async function PUT(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const supabase = await createClient()
-        const { id } = await params
-        const body = await request.json()
+        request: Request,
+        { params }: { params: Promise<{ id: string }> }
+    ) {
+        try {
+            const supabase = await createClient()
+            const { id } = await params
+            const body = await request.json()
 
-        if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+            if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-        const { data, error } = await supabase
-            .from('usuarios')
-            .update({
-                email: body.email,
-                nombre: body.nombre,
-            })
-            .eq('id', id)
-            .select()
-            .single()
+            const { data, error } = await supabase
+                .from('usuarios')
+                .update({
+                    email: body.email,
+                    nombre: body.nombre,
+                })
+                .eq('id', id)
+                .select()
+                .single()
 
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-        return NextResponse.json({ data })
-    } catch (error) {
-        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+            return NextResponse.json({ data })
+        } catch (error) {
+            return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+        }
     }
-}
 
-/**
- * DELETE /api/usuarios/[id]
- * Elimina un usuario
- */
-export async function DELETE(
-    request: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const supabase = await createClient()
-        const { id } = await params
+    /**
+     * DELETE /api/usuarios/[id]
+     * Elimina un usuario
+     */
+    export async function DELETE(
+        request: Request,
+        { params }: { params: Promise<{ id: string }> }
+    ) {
+        try {
+            const supabase = await createClient()
+            const { id } = await params
 
-        if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+            if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-        const { error } = await supabase.from('usuarios').delete().eq('id', id)
+            const { error } = await supabase.from('usuarios').delete().eq('id', id)
 
-        if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-        return NextResponse.json({ message: 'Usuario eliminado' })
-    } catch (error) {
-        return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+            return NextResponse.json({ message: 'Usuario eliminado' })
+        } catch (error) {
+            return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+        }
     }
-}

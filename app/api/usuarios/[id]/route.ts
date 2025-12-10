@@ -1,15 +1,10 @@
 import { createClient } from '@/lib/supabase/route'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 /**
  * GET /api/usuarios/[id]
  * 
- * Obtiene un usuario por su ID.
- * LÓGICA DE SINCRONIZACIÓN:
- * 1. Busca en la tabla 'usuarios'.
- * 2. Si no existe, busca en Supabase Auth (requiere Service Role Key).
- * 3. Si existe en Auth, lo crea en la tabla 'usuarios' y lo devuelve.
+ * Obtiene un usuario por su ID desde la tabla 'usuarios'.
  */
 export async function GET(
     request: Request,
@@ -30,12 +25,17 @@ export async function GET(
             .eq('id', id)
             .single()
 
-        // Si existe, devolverlo
-        if (usuarioExistente) {
-            return NextResponse.json({ data: usuarioExistente })
+        if (error) {
+            if (error.code === 'PGRST116') {
+                return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+            }
+            return NextResponse.json(
+                { error: error.message || 'Error procesando la solicitud' },
+                { status: 500 }
+            )
         }
 
-       
+        return NextResponse.json({ data: usuarioExistente })
 
     } catch (error) {
         console.error('Error al obtener usuario:', error)

@@ -8,11 +8,15 @@ import { UsuarioMapper, AsociacionMapper, type UsuarioModel } from '@/lib/types'
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
-        const userId = params.id
+        const supabase = await createClient()
+        const { id: userId } = await params
+
+        if (!userId) {
+            return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
+        }
 
         // 1. Obtener el usuario
         const { data: usuario, error: userError } = await supabase
@@ -22,16 +26,15 @@ export async function GET(
             .single()
 
         if (userError) {
+            if (userError.code === 'PGRST116') {
+                return NextResponse.json(
+                    { error: 'Usuario no encontrado' },
+                    { status: 404 }
+                )
+            }
             return NextResponse.json(
-                { error: 'Usuario no encontrado', details: userError.message },
-                { status: 404 }
-            )
-        }
-
-        if (!usuario) {
-            return NextResponse.json(
-                { error: 'Usuario no encontrado' },
-                { status: 404 }
+                { error: 'Error al obtener usuario', details: userError.message },
+                { status: 500 }
             )
         }
 
@@ -49,6 +52,9 @@ export async function GET(
 
         // 3. Mapear a los modelos de dominio
         const managedAssociations = associations?.map(AsociacionMapper.toDomain) || []
+        
+        // Nota: Asegúrate de que UsuarioMapper.toDomain acepte el segundo argumento
+        // Si no, tendrás que ajustar esto según tu definición de UsuarioMapper
         const userModel: UsuarioModel = UsuarioMapper.toDomain(usuario, managedAssociations)
 
         // 4. Retornar el usuario con sus asociaciones
@@ -76,11 +82,11 @@ export async function GET(
  */
 export async function PATCH(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
-        const userId = params.id
+        const supabase = await createClient()
+        const { id: userId } = await params
         const body = await request.json()
 
         // Validar que el usuario autenticado sea el mismo que se intenta actualizar
@@ -143,11 +149,11 @@ export async function PATCH(
  */
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = createClient()
-        const userId = params.id
+        const supabase = await createClient()
+        const { id: userId } = await params
 
         // Validar que el usuario autenticado sea el mismo que se intenta eliminar
         const { data: { user } } = await supabase.auth.getUser()

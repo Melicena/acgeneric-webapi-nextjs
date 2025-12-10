@@ -18,6 +18,8 @@ export async function GET(
             return NextResponse.json({ error: 'ID es requerido' }, { status: 400 })
         }
 
+        console.log(`[API] Buscando usuario con ID: ${id}`)
+
         // 1. Intentar obtener el usuario de la tabla pública
         const { data: usuarioExistente, error } = await supabase
             .from('usuarios')

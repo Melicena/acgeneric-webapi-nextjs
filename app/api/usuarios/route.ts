@@ -133,6 +133,15 @@ export async function PUT(request: Request) {
         const supabase = await createClient()
         const body = await request.json()
 
+        // --- DEBUG START ---
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+        console.log('--------------------------------------------------')
+        console.log('DEBUG: PUT /api/usuarios')
+        console.log('DEBUG: Authenticated User ID:', authUser?.id)
+        console.log('DEBUG: Target User ID (from body):', body.id)
+        if (authError) console.error('DEBUG: Auth Error:', authError)
+        // --- DEBUG END ---
+
         if (!body.id) {
             return NextResponse.json(
                 { error: 'ID es requerido en el cuerpo de la petición' },
@@ -170,8 +179,16 @@ export async function PUT(request: Request) {
 
         // Verificar si se actualizó algún registro
         if (!data || data.length === 0) {
+            const { data: { user: authUser } } = await supabase.auth.getUser()
             return NextResponse.json(
-                { error: 'Usuario no encontrado o no tienes permisos para actualizarlo' },
+                { 
+                    error: 'Usuario no encontrado o no tienes permisos para actualizarlo',
+                    debug_info: {
+                        target_id: body.id,
+                        auth_user_id: authUser?.id || 'not_authenticated',
+                        message: 'Si los IDs coinciden, verifica las políticas RLS en Supabase.'
+                    }
+                },
                 { status: 404 }
             )
         }

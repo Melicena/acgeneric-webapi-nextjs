@@ -122,24 +122,22 @@ export async function POST(request: Request) {
 }
 
 /**
- * PUT /api/usuarios?id=xxx
+ * PUT /api/usuarios
  * 
- * Ejemplo de Route Handler que actualiza un usuario
+ * Ejemplo de Route Handler que actualiza un usuario.
+ * Recibe el ID y los datos a actualizar en el body.
  */
 export async function PUT(request: Request) {
     try {
         const supabase = await createClient()
-        const { searchParams } = new URL(request.url)
-        const id = searchParams.get('id')
+        const body = await request.json()
 
-        if (!id) {
+        if (!body.id) {
             return NextResponse.json(
-                { error: 'ID es requerido' },
+                { error: 'ID es requerido en el cuerpo de la petición' },
                 { status: 400 }
             )
         }
-
-        const body = await request.json()
 
         const { data, error } = await supabase
             .from('usuarios')
@@ -147,7 +145,7 @@ export async function PUT(request: Request) {
                 email: body.email,
                 nombre: body.nombre,
             })
-            .eq('id', id)
+            .eq('id', body.id)
             .select()
             .single()
 

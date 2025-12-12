@@ -135,8 +135,15 @@ export async function PUT(request: Request) {
 
         // --- DEBUG START ---
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+        const { cookies } = await import('next/headers')
+        const cookieStore = await cookies()
+        const cookieNames = cookieStore.getAll().map(c => c.name)
+        const authHeader = request.headers.get('authorization')
+        
         console.log('--------------------------------------------------')
         console.log('DEBUG: PUT /api/usuarios')
+        console.log('DEBUG: Cookie Names:', cookieNames)
+        console.log('DEBUG: Auth Header:', authHeader ? 'Present' : 'Missing')
         console.log('DEBUG: Authenticated User ID:', authUser?.id)
         console.log('DEBUG: Target User ID (from body):', body.id)
         if (authError) console.error('DEBUG: Auth Error:', authError)

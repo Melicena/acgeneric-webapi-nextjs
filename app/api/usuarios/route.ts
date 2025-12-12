@@ -133,32 +133,24 @@ export async function PUT(request: Request) {
         const supabase = await createClient()
         const body = await request.json()
 
-        // --- DEBUG START ---
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-        
-        // Fix: Si getUser falla por cookies, intentamos usar el header Authorization manualmente si existe
-        // Esto es necesario si el cliente (tu app) envía el token en el header pero no las cookies
-        let finalUser = authUser;
-        if (!finalUser) {
+        // Autenticación: Intentar obtener usuario por cookies primero, luego por header
+        let { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
             const authHeader = request.headers.get('authorization')
             if (authHeader) {
                 const token = authHeader.replace('Bearer ', '')
-                const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token)
-                if (headerUser) {
-                    finalUser = headerUser
-                    console.log('DEBUG: User recovered via Authorization header')
-                } else {
-                     console.log('DEBUG: Failed to recover user via Authorization header:', headerError)
-                }
+                const { data: { user: headerUser } } = await supabase.auth.getUser(token)
+                user = headerUser
             }
         }
 
-        console.log('--------------------------------------------------')
-        console.log('DEBUG: PUT /api/usuarios')
-        console.log('DEBUG: Authenticated User ID:', finalUser?.id)
-        console.log('DEBUG: Target User ID (from body):', body.id)
-        if (authError && !finalUser) console.error('DEBUG: Auth Error:', authError)
-        // --- DEBUG END ---
+        if (!user) {
+            return NextResponse.json(
+                { error: 'No autorizado' },
+                { status: 401 }
+            )
+        }
 
         if (!body.id) {
             return NextResponse.json(
@@ -197,16 +189,8 @@ export async function PUT(request: Request) {
 
         // Verificar si se actualizó algún registro
         if (!data || data.length === 0) {
-            // const { data: { user: authUser } } = await supabase.auth.getUser() // REMOVE THIS REDUNDANT CALL
             return NextResponse.json(
-                { 
-                    error: 'Usuario no encontrado o no tienes permisos para actualizarlo',
-                    debug_info: {
-                        target_id: body.id,
-                        auth_user_id: finalUser?.id || 'not_authenticated',
-                        message: 'Si los IDs coinciden, verifica las políticas RLS en Supabase.'
-                    }
-                },
+                { error: 'Usuario no encontrado o no tienes permisos para actualizarlo' },
                 { status: 404 }
             )
         }

@@ -43,6 +43,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function createClient() {
     const cookieStore = await cookies()
 
+    // En Route Handlers, a veces necesitamos acceder a headers si las cookies fallan
+    // o si el cliente envía el token en Authorization header directamente.
+    // Aunque createServerClient está diseñado para cookies, podemos intentar
+    // inicializarlo de manera estándar primero.
+    
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

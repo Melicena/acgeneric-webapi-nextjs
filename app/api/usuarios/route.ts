@@ -126,6 +126,7 @@ export async function POST(request: Request) {
  * 
  * Ejemplo de Route Handler que actualiza un usuario.
  * Recibe el ID y los datos a actualizar en el body.
+ * Soporta actualización parcial de campos.
  */
 export async function PUT(request: Request) {
     try {
@@ -139,15 +140,26 @@ export async function PUT(request: Request) {
             )
         }
 
+        // Construir objeto de actualización dinámicamente
+        const updateData: any = {}
+        if (body.email !== undefined) updateData.email = body.email
+        if (body.nombre !== undefined) updateData.nombre = body.nombre
+        // Soporte para display_name (snake_case o camelCase)
+        if (body.display_name !== undefined) updateData.display_name = body.display_name
+        if (body.displayName !== undefined) updateData.display_name = body.displayName
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json(
+                { error: 'No se proporcionaron datos para actualizar' },
+                { status: 400 }
+            )
+        }
+
         const { data, error } = await supabase
             .from('usuarios')
-            .update({
-                email: body.email,
-                nombre: body.nombre,
-            })
+            .update(updateData)
             .eq('id', body.id)
-            .select()
-            .single()
+            .select() // No usamos .single() para evitar error si no encuentra registros
 
         if (error) {
             return NextResponse.json(
@@ -156,7 +168,15 @@ export async function PUT(request: Request) {
             )
         }
 
-        return NextResponse.json({ data })
+        // Verificar si se actualizó algún registro
+        if (!data || data.length === 0) {
+            return NextResponse.json(
+                { error: 'Usuario no encontrado o no tienes permisos para actualizarlo' },
+                { status: 404 }
+            )
+        }
+
+        return NextResponse.json({ data: data[0] })
     } catch (error) {
         return NextResponse.json(
             { error: 'Error interno del servidor' },

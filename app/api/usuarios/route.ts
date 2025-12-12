@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/route'
+import { createClient, createClientWithToken } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 /**
@@ -130,32 +130,23 @@ export async function POST(request: Request) {
  */
 export async function PUT(request: Request) {
     try {
-        const supabase = await createClient()
+        // Inicializamos supabase dentro de la lógica de autenticación
+        // const supabase = await createClient() // REMOVED
         const body = await request.json()
 
         // Autenticación: Intentar obtener usuario por cookies primero, luego por header
+        let supabase = await createClient()
         let { data: { user } } = await supabase.auth.getUser()
 
-        // --- DEBUG V2 START ---
-        const authHeader = request.headers.get('authorization')
-        console.log('DEBUG V2: Checking Auth')
-        console.log('DEBUG V2: User from cookies:', user?.id)
-        console.log('DEBUG V2: Auth Header present:', !!authHeader)
-        if (authHeader) console.log('DEBUG V2: Token prefix:', authHeader.substring(0, 15) + '...')
-        // --- DEBUG V2 END ---
-
+        // Si falla por cookies, intentar por header Authorization
         if (!user) {
+            const authHeader = request.headers.get('authorization')
             if (authHeader) {
                 const token = authHeader.replace('Bearer ', '')
-                // IMPORTANTE: Al usar getUser(token), necesitamos un cliente nuevo o reconfigurado
-                // porque el cliente actual 'supabase' está configurado con cookies vacías/inválidas.
-                // Sin embargo, supabase.auth.getUser(token) DEBERÍA funcionar si el token es válido.
-                
-                const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token)
-                
-                console.log('DEBUG V2: User from header token:', headerUser?.id)
-                if (headerError) console.log('DEBUG V2: Header Error:', headerError)
-                
+                // Reemplazamos el cliente supabase con uno autenticado explícitamente con el token
+                // Esto es CRUCIAL para que las políticas RLS funcionen en las consultas posteriores
+                supabase = await createClientWithToken(token)
+                const { data: { user: headerUser } } = await supabase.auth.getUser()
                 user = headerUser
             }
         }

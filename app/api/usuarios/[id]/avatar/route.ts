@@ -36,7 +36,14 @@ export async function POST(
     file.type === 'image/png' ? 'png' :
     file.type === 'image/webp' ? 'webp' : 'jpg'
 
-  const path = `users/${id}/avatar.${ext}`
+  const path = `users/${id}/avatar-${Date.now()}.${ext}`
+
+  // 1. Limpiar avatares antiguos antes de subir el nuevo
+  const { data: listData } = await supabase.storage.from('avatars').list(`users/${id}/`)
+  if (listData && listData.length > 0) {
+    const filesToRemove = listData.map(file => `users/${id}/${file.name}`)
+    await supabase.storage.from('avatars').remove(filesToRemove)
+  }
 
   const { error: uploadError } = await supabase.storage
     .from('avatars')

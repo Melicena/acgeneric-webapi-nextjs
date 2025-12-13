@@ -240,6 +240,15 @@ export async function DELETE(request: Request) {
             )
         }
 
+        const prefix = `users/${id}/`
+        const { data: files, error: listError } = await supabase.storage
+            .from('avatars')
+            .list(prefix, { limit: 1000 })
+        if (!listError && files && files.length > 0) {
+            const paths = files.map(f => `${prefix}${f.name}`)
+            await supabase.storage.from('avatars').remove(paths)
+        }
+
         return NextResponse.json({ message: 'Usuario eliminado correctamente' })
     } catch (error) {
         return NextResponse.json(

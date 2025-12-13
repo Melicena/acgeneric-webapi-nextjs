@@ -99,6 +99,15 @@ export async function DELETE(
 
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+        const prefix = `users/${id}/`
+        const { data: files, error: listError } = await supabase.storage
+            .from('avatars')
+            .list(prefix, { limit: 1000 })
+        if (!listError && files && files.length > 0) {
+            const paths = files.map(f => `${prefix}${f.name}`)
+            await supabase.storage.from('avatars').remove(paths)
+        }
+
         return NextResponse.json({ message: 'Usuario eliminado' })
     } catch (error) {
         return NextResponse.json({ error: 'Error interno' }, { status: 500 })

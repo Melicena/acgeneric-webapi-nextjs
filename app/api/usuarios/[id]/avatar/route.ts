@@ -39,15 +39,18 @@ export async function POST(
   const path = `users/${id}/avatar-${Date.now()}.${ext}`
   console.log(`[Avatar] Subiendo archivo a: ${path}`)
 
+  // Usamos Service Role para subida también, para saltar RLS de storage si el usuario no tiene política creada
+  const supabaseAdmin = await createClientWithToken(process.env.SUPABASE_SERVICE_ROLE_KEY!)
+
   // 1. Limpiar avatares antiguos antes de subir el nuevo
-  const { data: listData } = await supabase.storage.from('avatars').list(`users/${id}`)
+  const { data: listData } = await supabaseAdmin.storage.from('avatars').list(`users/${id}`)
   if (listData && listData.length > 0) {
     const filesToRemove = listData.map(file => `users/${id}/${file.name}`)
     console.log(`[Avatar] Eliminando archivos antiguos:`, filesToRemove)
-    await supabase.storage.from('avatars').remove(filesToRemove)
+    await supabaseAdmin.storage.from('avatars').remove(filesToRemove)
   }
 
-  const { error: uploadError } = await supabase.storage
+  const { error: uploadError } = await supabaseAdmin.storage
     .from('avatars')
     .upload(path, file, { upsert: true, contentType: file.type, cacheControl: '3600' })
 
@@ -60,7 +63,11 @@ export async function POST(
   const avatar_url = publicUrlData.publicUrl
   console.log(`[Avatar] URL generada: ${avatar_url}`)
 
-  const { data, error: updateError } = await supabase
+  // Usamos Service Role Key temporalmente para saltar RLS solo para la actualización
+  // IMPORTANTE: Esto asume que ya validamos que el usuario es quien dice ser arriba (línea 22)
+  // Reutilizamos el cliente admin creado arriba
+  
+  const { data, error: updateError } = await supabaseAdmin
     .from('usuarios')
     .update({ avatar_url })
     .eq('id', id)

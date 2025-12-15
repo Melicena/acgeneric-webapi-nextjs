@@ -16,8 +16,9 @@ export async function GET(request: Request) {
         const limit = parseInt(searchParams.get('limit') || '20')
         const offset = parseInt(searchParams.get('offset') || '0')
         const category = searchParams.get('categoria')
+        const search = searchParams.get('search') || searchParams.get('q')
 
-        console.log(`[GET /api/ofertas] Params - category: ${category}, limit: ${limit}, offset: ${offset}`)
+        console.log(`[GET /api/ofertas] Params - search: ${search}, category: ${category}, limit: ${limit}, offset: ${offset}`)
 
         // 1. Obtener usuario autenticado y sus suscripciones
         const { data: { user } } = await supabase.auth.getUser()
@@ -36,7 +37,21 @@ export async function GET(request: Request) {
             }
         }
 
-        // 2. Preparar queries
+        // 2. Preparar lógica de búsqueda (si aplica)
+        let matchingCommerceIds: string[] = []
+        if (search) {
+            // Buscamos comercios que coincidan con el nombre
+            const { data: comerciosFound } = await supabase
+                .from('comercios')
+                .select('id')
+                .ilike('nombre', `%${search}%`)
+            
+            if (comerciosFound) {
+                matchingCommerceIds = comerciosFound.map(c => c.id)
+            }
+        }
+
+        // 3. Preparar queries
         // Consulta de Todas las Ofertas (con filtro opcional)
         let queryTodas = supabase
             .from('ofertas')
@@ -52,9 +67,27 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
 
-        if (category && category !== 'Todas') {
+        if (category && category !== 'todas') {
             // Si categorias es array, usamos contains.
             queryTodas = queryTodas.contains('comercio.categorias', [category])
+        }
+
+        if (search) {
+            // Filtro: Título coincide O Comercio es uno de los encontrados
+            if (matchingCommerceIds.length > 0) {
+                // Sintaxis OR: titulo ilike OR comercio IN (...)
+                // Nota: .or() espera una string con filtros separados por coma.
+                // Para 'in', usamos la sintaxis "col.in.(val1,val2)"
+                // Pero dentro de .or(), la sintaxis es algo como "titulo.ilike.%val%,comercio.in.(id1,id2)"
+                const idsString = matchingCommerceIds.map(id => `"${id}"`).join(',') // Comillas dobles para UUIDs a veces necesarias en filtros raw, pero en PostgREST suele ser sin comillas o con.
+                // Probamos sin comillas primero, PostgREST usa (val1,val2). UUIDs no llevan comillas en la URL pero aquí sí en el string raw?
+                // Mejor estrategia: .or(`titulo.ilike.%${search}%,comercio.in.(${matchingCommerceIds.join(',')})`)
+                // Nota: Si hay muchos IDs, la URL puede ser muy larga.
+                queryTodas = queryTodas.or(`titulo.ilike.%${search}%,comercio.in.(${matchingCommerceIds.join(',')})`)
+            } else {
+                // Si no hay comercios que coincidan, solo buscamos por título
+                queryTodas = queryTodas.ilike('titulo', `%${search}%`)
+            }
         }
 
         // Consulta de Ofertas Suscritas
@@ -75,12 +108,21 @@ export async function GET(request: Request) {
                 .order('created_at', { ascending: false })
                 .limit(limit)
 
-            if (category && category !== 'Todas') {
+            if (category && category !== 'todas') {
                 querySuscritas = querySuscritas.contains('comercio.categorias', [category])
+            }
+
+            if (search) {
+                // Misma lógica de búsqueda para suscritos
+                if (matchingCommerceIds.length > 0) {
+                    querySuscritas = querySuscritas.or(`titulo.ilike.%${search}%,comercio.in.(${matchingCommerceIds.join(',')})`)
+                } else {
+                    querySuscritas = querySuscritas.ilike('titulo', `%${search}%`)
+                }
             }
         }
 
-        // 3. Ejecutar consultas en paralelo
+        // 4. Ejecutar consultas en paralelo
         const [ofertasTodasRes, suscritasRes] = await Promise.all([
             queryTodas,
             querySuscritas ? querySuscritas : Promise.resolve({ data: [], error: null })

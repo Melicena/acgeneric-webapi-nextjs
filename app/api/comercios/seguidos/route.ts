@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/route'
+import { createClient, createClientWithToken } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 /**
@@ -9,7 +9,17 @@ import { NextResponse } from 'next/server'
  */
 export async function GET(request: Request) {
     try {
-        const supabase = await createClient()
+        // Verificar si viene el token en el header Authorization (App Móvil)
+        const authHeader = request.headers.get('Authorization')
+        let supabase
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            supabase = await createClientWithToken(token)
+        } else {
+            // Fallback a cookies (Web)
+            supabase = await createClient()
+        }
         
         // 1. Verificar autenticación
         const { data: { user }, error: authError } = await supabase.auth.getUser()

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/route'
+import { createClient, createClientWithToken } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 /**
@@ -10,7 +10,18 @@ export async function POST(
     { params }: { params: { id: string } }
 ) {
     try {
-        const supabase = await createClient()
+        // Verificar si viene el token en el header Authorization (App Móvil)
+        const authHeader = request.headers.get('Authorization')
+        let supabase
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            supabase = await createClientWithToken(token)
+        } else {
+            // Fallback a cookies (Web)
+            supabase = await createClient()
+        }
+
         const { id: comercioId } = params
 
         // Verificar autenticación
@@ -61,7 +72,18 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
-        const supabase = await createClient()
+        // Verificar si viene el token en el header Authorization (App Móvil)
+        const authHeader = request.headers.get('Authorization')
+        let supabase
+
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            supabase = await createClientWithToken(token)
+        } else {
+            // Fallback a cookies (Web)
+            supabase = await createClient()
+        }
+
         const { id: comercioId } = params
 
         // Verificar autenticación

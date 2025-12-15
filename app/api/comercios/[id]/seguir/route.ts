@@ -7,9 +7,21 @@ import { NextResponse } from 'next/server'
  */
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } // Cambio aquí: params es una Promesa en Next.js App Router (a veces)
 ) {
     try {
+        // En Next.js App Router reciente, params puede necesitar await si se trata como objeto dinámico, 
+        // pero la firma estándar es { params }: { params: { id: string } }.
+        // Sin embargo, si params llega vacío o undefined, comercioId será undefined.
+        
+        // Corrección de seguridad: asegurarnos de leer params correctamente
+        const { id } = await context.params
+        const comercioId = id
+        
+        if (!comercioId) {
+             return NextResponse.json({ error: 'ID de comercio inválido' }, { status: 400 })
+        }
+
         // Verificar si viene el token en el header Authorization (App Móvil)
         const authHeader = request.headers.get('Authorization')
         let supabase
@@ -21,14 +33,14 @@ export async function POST(
             // Fallback a cookies (Web)
             supabase = await createClient()
         }
-
-        const { id: comercioId } = params
-
+        
         // Verificar autenticación
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
         }
+        
+        console.log(`[POST /seguir] User: ${user.id}, Comercio: ${comercioId}`)
 
         // Verificar si ya lo sigue
         const { data: existing } = await supabase
@@ -69,9 +81,16 @@ export async function POST(
  */
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await context.params
+        const comercioId = id
+
+        if (!comercioId) {
+             return NextResponse.json({ error: 'ID de comercio inválido' }, { status: 400 })
+        }
+
         // Verificar si viene el token en el header Authorization (App Móvil)
         const authHeader = request.headers.get('Authorization')
         let supabase
@@ -83,8 +102,6 @@ export async function DELETE(
             // Fallback a cookies (Web)
             supabase = await createClient()
         }
-
-        const { id: comercioId } = params
 
         // Verificar autenticación
         const { data: { user } } = await supabase.auth.getUser()

@@ -7,11 +7,13 @@ interface Oferta {
     titulo: string
     descripcion: string
     comercioData?: {
+        id: string
         nombre: string
         categorias: string[]
     }
     imageUrl: string
     nivelRequerido: string
+    isFollowed?: boolean
 }
 
 function useDebounce<T>(value: T, delay: number): T {
@@ -35,8 +37,54 @@ export default function SearchOffers() {
     const [results, setResults] = useState<Oferta[]>([])
     const [loading, setLoading] = useState(false)
     const [hasSearched, setHasSearched] = useState(false)
+    const [token, setToken] = useState<string | null>(null)
     
     const debouncedSearchTerm = useDebounce(searchTerm, 500)
+
+    useEffect(() => {
+        // Simular obtención del token (en una app real vendría de un AuthContext)
+        // Por ahora asumimos que si el usuario navega aquí, quizás ya tengamos un token en localStorage o similar.
+        // O simplemente lo dejamos null y el botón fallará (o pedirá login).
+        // Para este ejercicio, intentaremos leerlo de alguna parte o simplemente manejar el 401.
+        // NOTA: En Next.js con Supabase, usaríamos useSession() de @supabase/auth-helpers-react
+        const storedToken = localStorage.getItem('sb-access-token') 
+        // Ajustar según como se guarde el token en esta app. 
+        // Si no hay contexto, asumimos que las llamadas fallarán si no hay cookie httpOnly.
+    }, [])
+    
+    const handleFollow = async (comercioId: string, currentStatus: boolean) => {
+        try {
+            // Optimistic update
+            setResults(prev => prev.map(o => {
+                if (o.comercioData?.id === comercioId) {
+                    return { ...o, isFollowed: !currentStatus }
+                }
+                return o
+            }))
+
+            const method = currentStatus ? 'DELETE' : 'POST'
+            const res = await fetch(`/api/comercios/${comercioId}/seguir`, {
+                method
+            })
+
+            if (!res.ok) {
+                // Revertir si falla
+                if (res.status === 401) {
+                    alert('Debes iniciar sesión para seguir comercios')
+                }
+                throw new Error('Error al actualizar seguimiento')
+            }
+        } catch (error) {
+            console.error(error)
+            // Revertir
+            setResults(prev => prev.map(o => {
+                if (o.comercioData?.id === comercioId) {
+                    return { ...o, isFollowed: currentStatus }
+                }
+                return o
+            }))
+        }
+    }
     
     useEffect(() => {
         const fetchOffers = async () => {
@@ -115,6 +163,18 @@ export default function SearchOffers() {
                                         {oferta.comercioData?.categorias?.join(', ') || 'Sin categoría'}
                                     </span>
                                 </div>
+                                {oferta.comercioData?.id && (
+                                    <button
+                                        onClick={() => handleFollow(oferta.comercioData!.id, !!oferta.isFollowed)}
+                                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                                            oferta.isFollowed
+                                                ? 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                    >
+                                        {oferta.isFollowed ? 'Siguiendo' : 'Seguir'}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

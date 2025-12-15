@@ -51,7 +51,6 @@ export interface UsuarioModel {
     avatarUrl: string | null
     rol: UserRole
     comercios: string[] | null
-    comerciosSubs: Record<string, boolean> | null
     token: string | null
     ultimoAcceso: string | null
     createdAt: string
@@ -80,23 +79,10 @@ export interface OfertaModel {
     nivelRequerido: string
     userId: string | null
     createdAt: string
+    isFollowed?: boolean
 }
 
-export interface CuponModel {
-    id: string
-    nombre: string
-    imagenUrl: string
-    descripcion: string
-    puntosRequeridos: number
-    storeId: string
-    fechaFin: string | null
-    qrCode: string | null
-    nivelRequerido: string | null
-    estado: string | null
-    comercio: string
-    userId: string | null
-    createdAt: string
-}
+
 
 // ==========================================
 // Mappers (Data Transformation Layer)
@@ -156,7 +142,6 @@ export const UsuarioMapper = {
         avatarUrl: row.avatar_url,
         rol: (row.rol || UserRoles.USUARIO) as UserRole,
         comercios: Array.isArray(row.comercios) ? row.comercios as string[] : null,
-        comerciosSubs: row.comercios_subs ? row.comercios_subs as Record<string, boolean> : null,
         token: row.token,
         ultimoAcceso: row.ultimo_acceso,
         createdAt: row.created_at,
@@ -171,7 +156,6 @@ export const UsuarioMapper = {
         avatar_url: model.avatarUrl,
         rol: model.rol || UserRoles.USUARIO,
         comercios: model.comercios,
-        comercios_subs: model.comerciosSubs,
         token: model.token,
         ultimo_acceso: model.ultimoAcceso
     })
@@ -211,35 +195,4 @@ export const OfertaMapper = {
     })
 }
 
-export const CuponMapper = {
-    toDomain: (row: Tables<'cupones'>): CuponModel => ({
-        id: row.id,
-        nombre: row.nombre,
-        imagenUrl: row.imagen_url,
-        descripcion: row.descripcion,
-        puntosRequeridos: row.puntos_requeridos,
-        storeId: row.store_id,
-        fechaFin: row.fecha_fin,
-        qrCode: row.qr_code,
-        nivelRequerido: row.nivel_requerido,
-        estado: row.estado,
-        comercio: row.comercio,
-        userId: row.user_id,
-        createdAt: row.created_at
-    }),
 
-    toDbInsert: (model: Partial<CuponModel>): InsertDto<'cupones'> => ({
-        // @ts-ignore
-        nombre: model.nombre!,
-        imagen_url: model.imagenUrl!,
-        descripcion: model.descripcion!,
-        puntos_requeridos: model.puntosRequeridos,
-        store_id: model.storeId!,
-        fecha_fin: model.fechaFin,
-        qr_code: model.qrCode,
-        nivel_requerido: model.nivelRequerido,
-        estado: model.estado,
-        comercio: model.comercio!,
-        user_id: model.userId
-    })
-}

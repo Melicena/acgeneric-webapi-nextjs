@@ -9,7 +9,7 @@ Esta guía resume todas las URLs disponibles bajo `"/api"` con ejemplos de uso d
 - Nota: Algunas rutas requieren usuario autenticado; otras permiten acceso público.
 
 ## Convenciones
-- Base URL: relativa al host actual, p.e. `"/api/cupones"`.
+- Base URL: relativa al host actual, p.e. `"/api/ofertas"`.
 - Content-Type:
   - JSON: `application/json`
   - Subida de archivos: `multipart/form-data`
@@ -82,67 +82,6 @@ Respuesta típica:
 Crea una nueva oferta.
 - Body (JSON): `comercio`, `titulo`, `descripcion`, `imageUrl`, `fechaFin`, `nivelRequerido`.
 - Autenticación: Requerida.
-
----
-
-Rutas para gestionar cupones.
-
-### GET /api/cupones
-- Query:
-  - `estado` (opcional): estado del cupón (p.e. `"ACTIVO"`)
-  - `comercio` (opcional)
-  - `limit` (opcional, por defecto `20`)
-- Autenticación: no obligatoria.
-
-Ejemplo `fetch`:
-```ts
-const res = await fetch('/api/cupones?estado=ACTIVO&limit=10');
-const data = await res.json();
-```
-
-Ejemplo `curl`:
-```bash
-curl -sS '/api/cupones?estado=ACTIVO&limit=10'
-```
-
-Respuesta típica:
-```json
-[
-  {
-    "id": "uuid",
-    "nombre": "10% descuento",
-    "descripcion": "Aplica en tienda X",
-    "comercio": "Tienda X",
-    "imagenUrl": "https://.../img.png",
-    "puntosRequeridos": 100,
-    "estado": "ACTIVO",
-    "createdAt": "2025-01-01T00:00:00Z"
-  }
-]
-```
-
-### POST /api/cupones
-- Body (JSON):
-  - Requeridos: `nombre`, `descripcion`, `comercio`
-  - Opcionales: `imagenUrl`, `puntosRequeridos`, `storeId`, `fechaFin`, `qrCode`, `nivelRequerido`, `estado` (`"ACTIVO"` por defecto)
-- Autenticación: requiere usuario Supabase.
-
-Ejemplo `fetch`:
-```ts
-const res = await fetch('/api/cupones', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    nombre: '15% descuento',
-    descripcion: 'Válido hasta fin de mes',
-    comercio: 'Tienda Y'
-  })
-});
-const created = await res.json();
-```
 
 ---
 
@@ -396,4 +335,40 @@ Respuesta típica:
 ## Notas adicionales
 - El backend usa Supabase Storage (bucket `avatars`) y Row Level Security en algunas operaciones. Usar siempre el token del usuario para operaciones sensibles.
 - Si se habilita `x-api-key`, añadirlo en las llamadas del backend-to-backend o en despliegues controlados.
+
+---
+
+## /api/comercios/[id]/seguir
+Gestión de seguimiento de comercios.
+
+### POST /api/comercios/:id/seguir
+Permite al usuario autenticado seguir a un comercio.
+- Path param: `id` (UUID del comercio)
+- Autenticación: Requerida (Token Bearer).
+
+Ejemplo `fetch`:
+```ts
+await fetch('/api/comercios/uuid-comercio/seguir', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
+### DELETE /api/comercios/:id/seguir
+Permite al usuario autenticado dejar de seguir a un comercio.
+- Path param: `id` (UUID del comercio)
+- Autenticación: Requerida (Token Bearer).
+
+Ejemplo `fetch`:
+```ts
+await fetch('/api/comercios/uuid-comercio/seguir', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+```
+
 

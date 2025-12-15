@@ -25,15 +25,14 @@ export async function GET(request: Request) {
         let suscripciones: string[] = []
 
         if (user) {
-            const { data: usuarioData } = await supabase
-                .from('usuarios')
-                .select('comercios_subs')
-                .eq('id', user.id)
-                .single()
+            // Consulta a la tabla relacional comercios_seguidos
+            const { data: seguidos } = await supabase
+                .from('comercios_seguidos')
+                .select('comercio_id')
+                .eq('user_id', user.id)
 
-            // Asegurarnos de que sea un array de strings (IDs de comercios)
-            if (usuarioData?.comercios_subs && Array.isArray(usuarioData.comercios_subs)) {
-                suscripciones = usuarioData.comercios_subs as string[]
+            if (seguidos && seguidos.length > 0) {
+                suscripciones = seguidos.map(s => s.comercio_id)
             }
         }
 
@@ -136,8 +135,20 @@ export async function GET(request: Request) {
 
         // 4. Mapear resultados
         // Nota: OfertaMapper.toDomain ahora maneja el objeto 'comercio' anidado
-        const ofertasCercanas = ofertasTodasRes.data?.map(item => OfertaMapper.toDomain(item)) || []
-        const ofertasSuscritas = suscritasRes?.data?.map(item => OfertaMapper.toDomain(item)) || []
+        const ofertasCercanas = ofertasTodasRes.data?.map(item => {
+            const domain = OfertaMapper.toDomain(item)
+            // Añadir isFollowed basado en la lista de suscripciones
+            if (domain.comercioData?.id) {
+                domain.isFollowed = suscripciones.includes(domain.comercioData.id)
+            }
+            return domain
+        }) || []
+        
+        const ofertasSuscritas = suscritasRes?.data?.map(item => {
+            const domain = OfertaMapper.toDomain(item)
+            domain.isFollowed = true // Por definición están suscritas
+            return domain
+        }) || []
 
         return NextResponse.json({
             data: {

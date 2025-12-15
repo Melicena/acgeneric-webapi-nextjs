@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: ACGeneric WebAPI
   version: 1.0.0
-  description: API para gestión de ofertas, cupones y comercios.
+  description: API para gestión de ofertas y comercios.
 paths:
   /api/ofertas:
     get:
@@ -57,7 +57,89 @@ paths:
                         nullable: true
         '500':
           description: Error del servidor
+  /api/comercios/{id}/seguir:
+    post:
+      summary: Seguir a un comercio
+      description: Permite al usuario autenticado seguir a un comercio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del comercio a seguir
+      responses:
+        '200':
+          description: Comercio seguido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Comercio seguido exitosamente"
+        '401':
+          description: No autorizado
+        '500':
+          description: Error del servidor
+    delete:
+      summary: Dejar de seguir a un comercio
+      description: Permite al usuario autenticado dejar de seguir a un comercio.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del comercio a dejar de seguir
+      responses:
+        '200':
+          description: Dejaste de seguir al comercio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Dejaste de seguir al comercio"
+        '401':
+          description: No autorizado
+        '500':
+          description: Error del servidor
+  /api/comercios/seguidos:
+    get:
+      summary: Obtener IDs de comercios seguidos
+      description: Devuelve una lista de los IDs de los comercios que el usuario actual sigue.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+        '401':
+          description: No autorizado
+        '500':
+          description: Error del servidor
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     Oferta:
       type: object

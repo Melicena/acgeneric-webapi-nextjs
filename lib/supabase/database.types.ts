@@ -46,6 +46,43 @@ export interface Database {
                     }
                 ]
             }
+            comercios_seguidos: {
+                Row: {
+                    id: string
+                    user_id: string
+                    comercio_id: string
+                    notifications_enabled: boolean
+                    created_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    comercio_id: string
+                    notifications_enabled?: boolean
+                    created_at?: string
+                }
+                Update: {
+                    id?: string
+                    user_id?: string
+                    comercio_id?: string
+                    notifications_enabled?: boolean
+                    created_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "comercios_seguidos_comercio_id_fkey"
+                        columns: ["comercio_id"]
+                        referencedRelation: "comercios"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "comercios_seguidos_user_id_fkey"
+                        columns: ["user_id"]
+                        referencedRelation: "users"
+                        referencedColumns: ["id"]
+                    }
+                ]
+            }
             ofertas: {
                 Row: {
                     id: string
@@ -92,61 +129,6 @@ export interface Database {
                     }
                 ]
             }
-            cupones: {
-                Row: {
-                    id: string
-                    nombre: string
-                    imagen_url: string
-                    descripcion: string
-                    puntos_requeridos: number
-                    store_id: string
-                    fecha_fin: string | null
-                    qr_code: string | null
-                    nivel_requerido: string | null
-                    estado: string | null
-                    comercio: string
-                    user_id: string | null
-                    created_at: string
-                }
-                Insert: {
-                    id?: string
-                    nombre: string
-                    imagen_url: string
-                    descripcion: string
-                    puntos_requeridos?: number
-                    store_id: string
-                    fecha_fin?: string | null
-                    qr_code?: string | null
-                    nivel_requerido?: string | null
-                    estado?: string | null
-                    comercio: string
-                    user_id?: string | null
-                    created_at?: string
-                }
-                Update: {
-                    id?: string
-                    nombre?: string
-                    imagen_url?: string
-                    descripcion?: string
-                    puntos_requeridos?: number
-                    store_id?: string
-                    fecha_fin?: string | null
-                    qr_code?: string | null
-                    nivel_requerido?: string | null
-                    estado?: string | null
-                    comercio?: string
-                    user_id?: string | null
-                    created_at?: string
-                }
-                Relationships: [
-                    {
-                        foreignKeyName: "cupones_user_id_fkey"
-                        columns: ["user_id"]
-                        referencedRelation: "users"
-                        referencedColumns: ["id"]
-                    }
-                ]
-            }
             usuarios: {
                 Row: {
                     id: string
@@ -157,7 +139,6 @@ export interface Database {
                     rol: string | null
                     token: string | null
                     comercios: Json | null
-                    comercios_subs: Json | null
                     ultimo_acceso: string | null
                     created_at: string
                 }
@@ -170,7 +151,6 @@ export interface Database {
                     rol?: string | null
                     token?: string | null
                     comercios?: Json | null
-                    comercios_subs?: Json | null
                     ultimo_acceso?: string | null
                     created_at?: string
                 }
@@ -183,7 +163,6 @@ export interface Database {
                     rol?: string | null
                     token?: string | null
                     comercios?: Json | null
-                    comercios_subs?: Json | null
                     ultimo_acceso?: string | null
                     created_at?: string
                 }

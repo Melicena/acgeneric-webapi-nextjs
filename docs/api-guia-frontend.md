@@ -19,9 +19,72 @@ Esta guía resume todas las URLs disponibles bajo `"/api"` con ejemplos de uso d
   - `404`: recurso no encontrado
   - `409`: conflicto (duplicados)
 
+
 ---
 
-## /api/cupones
+## /api/ofertas
+Rutas para gestionar ofertas y promociones.
+
+### GET /api/ofertas
+Obtiene ofertas activas, filtradas opcionalmente por categoría. Devuelve dos listas: `ofertasCercanas` (general/filtrado) y `ofertasSuscritas` (de comercios seguidos).
+
+- Query:
+  - `categoria` (opcional): Filtro por categoría de comercio. 
+    - `"todas"`: devuelve todas.
+    - `"<valor>"`: devuelve solo ofertas de comercios en esa categoría.
+  - `limit` (opcional, por defecto `20`): Cantidad de elementos.
+  - `offset` (opcional, por defecto `0`): Desplazamiento para paginación.
+
+- Autenticación: Opcional (si está autenticado, devuelve `ofertasSuscritas`).
+
+Ejemplo `fetch`:
+```ts
+// Obtener todas
+const res = await fetch('/api/ofertas?categoria=todas&limit=10&offset=0');
+const data = await res.json();
+
+// Filtrar por categoría
+const res2 = await fetch('/api/ofertas?categoria=Restaurante');
+```
+
+Respuesta típica:
+```json
+{
+  "data": {
+    "ofertasCercanas": [
+      {
+        "id": "uuid",
+        "titulo": "2x1 en Cenas",
+        "comercio": "uuid-comercio",
+        "comercioData": {
+           "id": "uuid-comercio",
+           "nombre": "Restaurante X",
+           "categorias": ["Restaurante", "Italiana"]
+        },
+        "descripcion": "...",
+        "imageUrl": "...",
+        "fechaInicio": "...",
+        "fechaFin": "...",
+        "nivelRequerido": "FREE"
+      }
+    ],
+    "ofertasSuscritas": []
+  },
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": null
+  }
+}
+```
+
+### POST /api/ofertas
+Crea una nueva oferta.
+- Body (JSON): `comercio`, `titulo`, `descripcion`, `imageUrl`, `fechaFin`, `nivelRequerido`.
+- Autenticación: Requerida.
+
+---
+
 Rutas para gestionar cupones.
 
 ### GET /api/cupones

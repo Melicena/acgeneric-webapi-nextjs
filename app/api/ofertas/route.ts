@@ -11,10 +11,13 @@ export async function GET(request: Request) {
     try {
         const supabase = await createClient()
 
-        // Obtener filtros de la URL (opcional)
+        // Obtener filtros de la URL
         const { searchParams } = new URL(request.url)
-        const nivel = searchParams.get('nivel') // Filtrar por nivel
         const limit = parseInt(searchParams.get('limit') || '20')
+        const offset = parseInt(searchParams.get('offset') || '0')
+        const category = searchParams.get('categoria')
+
+        console.log(`[GET /api/ofertas] Params - category: ${category}, limit: ${limit}, offset: ${offset}`)
 
         // 1. Obtener usuario autenticado y sus suscripciones
         const { data: { user } } = await supabase.auth.getUser()
@@ -33,71 +36,76 @@ export async function GET(request: Request) {
             }
         }
 
-        // 2. Ejecutar consultas en paralelo
-        const [ofertasTodasRes, suscritasRes] = await Promise.all([
-            // Consulta de Todas las Ofertas con datos de usuario (comercio) para distancia
-            supabase
+        // 2. Preparar queries
+        // Consulta de Todas las Ofertas (con filtro opcional)
+        let queryTodas = supabase
+            .from('ofertas')
+            .select(`
+                *,
+                comercio:comercios!inner (
+                    id,
+                    nombre,
+                    location,
+                    categorias
+                )
+            `)
+            .order('created_at', { ascending: false })
+            .range(offset, offset + limit - 1)
+
+        if (category && category !== 'todas') {
+            // Si categorias es array, usamos contains.
+            queryTodas = queryTodas.contains('comercio.categorias', [category])
+        }
+
+        // Consulta de Ofertas Suscritas
+        let querySuscritas = null
+        if (suscripciones.length > 0) {
+            querySuscritas = supabase
                 .from('ofertas')
                 .select(`
                     *,
                     comercio:comercios!inner (
                         id,
                         nombre,
-                        location
+                        location,
+                        categorias
                     )
                 `)
+                .in('comercio', suscripciones)
                 .order('created_at', { ascending: false })
-                .limit(50), // Traemos más para poder filtrar/ordenar por distancia en memoria
+                .limit(limit)
 
-            // Consulta de Ofertas de Comercios Suscritos
-            suscripciones.length > 0
-                ? supabase
-                    .from('ofertas')
-                    .select(`
-                        *,
-                        comercio:comercios!inner (
-                            id,
-                            nombre,
-                            location
-                        )
-                    `)
-                    .in('comercio', suscripciones)
-                    .order('created_at', { ascending: false })
-                    .limit(limit)
-                : Promise.resolve({ data: [], error: null })
+            if (category && category !== 'todas') {
+                querySuscritas = querySuscritas.contains('comercio.categorias', [category])
+            }
+        }
+
+        // 3. Ejecutar consultas en paralelo
+        const [ofertasTodasRes, suscritasRes] = await Promise.all([
+            queryTodas,
+            querySuscritas ? querySuscritas : Promise.resolve({ data: [], error: null })
         ])
 
         // Manejo de errores
         if (ofertasTodasRes.error) {
             console.error('Error obteniendo ofertas:', ofertasTodasRes.error)
+            // No fallamos toda la request, devolvemos array vacío
         }
 
-        // 3. Procesar Ofertas Cercanas
-        // TODO: Implementar lógica de cálculo de distancia real
-        // const userLat = parseFloat(searchParams.get('lat') || '0')
-        // const userLong = parseFloat(searchParams.get('long') || '0')
-        
-        // Si la tabla comercios tiene columna 'location' (lat, long o PostGIS geography), 
-        // aquí podemos iterar sobre ofertasTodasRes.data y calcular distancia.
-        
-        /* Ejemplo de lógica futura:
-        const ofertasConDistancia = ofertasTodasRes.data?.map(oferta => {
-             const comercioLoc = oferta.comercio?.location // Asumiendo objeto {lat, long}
-             const distancia = calcularDistancia(userLat, userLong, comercioLoc.lat, comercioLoc.long)
-             return { ...oferta, distancia }
-        }).sort((a, b) => a.distancia - b.distancia)
-        
-        const ofertasCercanas = ofertasConDistancia.slice(0, 10).map(OfertaMapper.toDomain)
-        */
-
-        // Por ahora devolvemos las más recientes tal cual vienen de la query
-        const ofertasCercanas = ofertasTodasRes.data?.slice(0, 10).map(item => OfertaMapper.toDomain(item)) || []
-        const ofertasSuscritas = suscritasRes.data?.map(OfertaMapper.toDomain) || []
+        // 4. Mapear resultados
+        // Nota: OfertaMapper.toDomain ahora maneja el objeto 'comercio' anidado
+        const ofertasCercanas = ofertasTodasRes.data?.map(item => OfertaMapper.toDomain(item)) || []
+        const ofertasSuscritas = suscritasRes?.data?.map(item => OfertaMapper.toDomain(item)) || []
 
         return NextResponse.json({
             data: {
                 ofertasCercanas,
                 ofertasSuscritas
+            },
+            meta: {
+                page: Math.floor(offset / limit) + 1,
+                limit,
+                total: ofertasTodasRes.count // Solo si agregamos count: 'exact' a la query, por ahora null
             }
         })
 

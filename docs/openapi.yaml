@@ -1,0 +1,97 @@
+openapi: 3.0.0
+info:
+  title: ACGeneric WebAPI
+  version: 1.0.0
+  description: API para gestión de ofertas, cupones y comercios.
+paths:
+  /api/ofertas:
+    get:
+      summary: Obtener ofertas activas
+      description: Recupera un listado de ofertas cercanas (o filtradas) y ofertas de comercios suscritos.
+      parameters:
+        - in: query
+          name: categoria
+          schema:
+            type: string
+          description: Categoría para filtrar ofertas (ej. "Restaurante", "todas").
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Número máximo de resultados.
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Desplazamiento para paginación.
+      responses:
+        '200':
+          description: Listado de ofertas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      ofertasCercanas:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Oferta'
+                      ofertasSuscritas:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Oferta'
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                        nullable: true
+        '500':
+          description: Error del servidor
+components:
+  schemas:
+    Oferta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        imageUrl:
+          type: string
+        fechaInicio:
+          type: string
+          format: date-time
+        fechaFin:
+          type: string
+          format: date-time
+        nivelRequerido:
+          type: string
+        comercio:
+          type: string
+          description: ID del comercio
+        comercioData:
+          type: object
+          properties:
+            id:
+              type: string
+            nombre:
+              type: string
+            location:
+              type: string
+            categorias:
+              type: array
+              items:
+                type: string

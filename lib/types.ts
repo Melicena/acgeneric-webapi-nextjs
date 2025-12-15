@@ -65,6 +65,13 @@ export interface UsuarioModel {
 export interface OfertaModel {
     id: string
     comercio: string
+    comercioData?: {
+        id: string
+        nombre: string
+        location?: any
+        categoria?: string
+        categorias?: any // Para soportar la columna plural de la DB
+    }
     titulo: string
     descripcion: string
     imageUrl: string
@@ -171,9 +178,16 @@ export const UsuarioMapper = {
 }
 
 export const OfertaMapper = {
-    toDomain: (row: Tables<'ofertas'>): OfertaModel => ({
+    toDomain: (row: Tables<'ofertas'> & { comercio?: any }): OfertaModel => ({
         id: row.id,
         comercio: row.comercio,
+        comercioData: row.comercio ? {
+            id: row.comercio.id,
+            nombre: row.comercio.nombre,
+            location: row.comercio.location,
+            categoria: row.comercio.categorias, // Mapeamos categorias a categoria por compatibilidad
+            categorias: row.comercio.categorias
+        } : undefined,
         titulo: row.titulo,
         descripcion: row.descripcion,
         imageUrl: row.image_url,

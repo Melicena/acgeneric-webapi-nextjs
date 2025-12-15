@@ -67,7 +67,7 @@ export async function GET(request: Request) {
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1)
 
-        if (category && category !== 'todas') {
+        if (category && category !== 'Todas') {
             // Si categorias es array, usamos contains.
             queryTodas = queryTodas.contains('comercio.categorias', [category])
         }
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
                 .order('created_at', { ascending: false })
                 .limit(limit)
 
-            if (category && category !== 'todas') {
+            if (category && category !== 'Todas') {
                 querySuscritas = querySuscritas.contains('comercio.categorias', [category])
             }
 

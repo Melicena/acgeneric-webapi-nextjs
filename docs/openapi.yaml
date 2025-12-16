@@ -57,6 +57,29 @@ paths:
                         nullable: true
         '500':
           description: Error del servidor
+  /api/comercios/{id}:
+    get:
+      summary: Obtener un comercio por ID
+      description: Retorna los detalles de un comercio específico.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del comercio
+      responses:
+        '200':
+          description: Detalles del comercio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comercio'
+        '404':
+          description: Comercio no encontrado
+        '500':
+          description: Error del servidor
   /api/comercios/{id}/seguir:
     post:
       summary: Seguir a un comercio
@@ -192,6 +215,34 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    Comercio:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        nombre:
+          type: string
+        descripcion:
+          type: string
+        direccion:
+          type: string
+        telefono:
+          type: string
+        horario:
+          type: string
+        imagen_url:
+          type: string
+        latitud:
+          type: number
+        longitud:
+          type: number
+        categorias:
+          type: array
+          items:
+            type: string
+        is_approved:
+          type: boolean
     ComercioCercano:
       type: object
       properties:

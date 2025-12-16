@@ -202,9 +202,19 @@ components:
           type: string
         direccion:
           type: string
+        telefono:
+          type: string
+        horario:
+          type: string
+        imagen_url:
+          type: string
         distancia:
           type: number
           description: Distancia en km
+        latitud:
+          type: number
+        longitud:
+          type: number
         coordenadas:
           type: object
           properties:

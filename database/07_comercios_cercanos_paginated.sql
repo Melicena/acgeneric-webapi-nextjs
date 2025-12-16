@@ -15,8 +15,11 @@ RETURNS TABLE (
   id UUID,
   nombre TEXT,
   direccion TEXT,
+  telefono TEXT,
+  horario TEXT,
   latitud DOUBLE PRECISION,
   longitud DOUBLE PRECISION,
+  imagen_url TEXT,
   categorias TEXT[],
   distancia_km NUMERIC,
   total_count BIGINT
@@ -33,8 +36,11 @@ BEGIN
       c.id,
       c.nombre,
       c.direccion,
+      c.telefono,
+      c.horario,
       c.latitud,
       c.longitud,
+      c.imagen_url,
       c.categorias,
       ROUND(
         (ST_Distance(
@@ -53,8 +59,11 @@ BEGIN
     cd.id,
     cd.nombre,
     cd.direccion,
+    cd.telefono,
+    cd.horario,
     cd.latitud,
     cd.longitud,
+    cd.imagen_url,
     cd.categorias,
     cd.distancia_km,
     tr.count AS total_count
@@ -67,4 +76,4 @@ END;
 $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 COMMENT ON FUNCTION get_comercios_sorted_by_distance IS 
-  'Obtiene comercios activos ordenados por distancia al usuario, con paginación y conteo total.';
+  'Obtiene comercios activos ordenados por distancia al usuario, con paginación y conteo total. Incluye detalles de contacto.';

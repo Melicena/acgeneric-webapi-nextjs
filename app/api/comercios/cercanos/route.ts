@@ -47,9 +47,19 @@ import { NextResponse } from 'next/server'
  *                         type: string
  *                       direccion:
  *                         type: string
+ *                       telefono:
+ *                         type: string
+ *                       horario:
+ *                         type: string
+ *                       imagen_url:
+ *                         type: string
  *                       distancia:
  *                         type: number
  *                         description: Distancia en km
+ *                       latitud:
+ *                         type: number
+ *                       longitud:
+ *                         type: number
  *                       coordenadas:
  *                         type: object
  *                         properties:
@@ -138,7 +148,12 @@ export async function GET(request: Request) {
                 id: item.id,
                 nombre: item.nombre,
                 direccion: item.direccion,
+                telefono: item.telefono,
+                horario: item.horario,
+                imagen_url: item.imagen_url,
                 distancia: item.distancia_km,
+                latitud: item.latitud,
+                longitud: item.longitud,
                 coordenadas: {
                     lat: item.latitud,
                     lng: item.longitud

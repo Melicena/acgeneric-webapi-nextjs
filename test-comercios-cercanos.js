@@ -48,6 +48,15 @@ async function main() {
                 console.log('Primer registro:', JSON.stringify(data[0], null, 2));
                 console.log(`Total Count reportado: ${data[0].total_count}`);
                 
+                // Verificar campos adicionales
+                const sample = data[0];
+                console.log('Verificando campos solicitados:');
+                console.log(`- telefono: ${sample.telefono ? 'OK' : 'MISSING/NULL'}`);
+                console.log(`- horario: ${sample.horario ? 'OK' : 'MISSING/NULL'}`);
+                console.log(`- imagen_url: ${sample.imagen_url ? 'OK' : 'MISSING/NULL'}`);
+                console.log(`- latitud: ${sample.latitud ? 'OK' : 'MISSING/NULL'}`);
+                console.log(`- longitud: ${sample.longitud ? 'OK' : 'MISSING/NULL'}`);
+
                 // Verificar orden
                 if (data.length > 1) {
                     const firstDist = data[0].distancia_km;

@@ -157,6 +157,57 @@ paths:
           description: No autorizado
         '500':
           description: Error del servidor
+  /api/comercios/cercanos-con-ofertas:
+    get:
+      summary: Obtener comercios cercanos con ofertas activas
+      description: Retorna una lista paginada de comercios ordenados por cercanía que tienen al menos una oferta vigente.
+      parameters:
+        - in: query
+          name: latitud
+          required: true
+          schema:
+            type: number
+          description: Latitud del usuario
+        - in: query
+          name: longitud
+          required: true
+          schema:
+            type: number
+          description: Longitud del usuario
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Número de página (default 1)
+      responses:
+        '200':
+          description: Listado de comercios con ofertas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ComercioCercano'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      per_page:
+                        type: integer
+                      current_page:
+                        type: integer
+                      total_pages:
+                        type: integer
+        '400':
+          description: Parámetros inválidos
+        '500':
+          description: Error del servidor
   /api/comercios/cercanos:
     get:
       summary: Obtiene todos los comercios ordenados por distancia

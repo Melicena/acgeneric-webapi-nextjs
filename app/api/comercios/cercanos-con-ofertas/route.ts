@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * @swagger
- * /api/comercios/cercanos:
+ * /api/comercios/cercanos-con-ofertas:
  *   get:
- *     summary: Obtiene todos los comercios ordenados por distancia
- *     description: Retorna un listado paginado de comercios ordenados por cercanía a la ubicación del usuario.
+ *     summary: Obtener comercios cercanos con ofertas activas
+ *     description: Retorna una lista paginada de comercios ordenados por cercanía que tienen al menos una oferta vigente.
  *     parameters:
  *       - in: query
  *         name: latitud
@@ -22,14 +24,13 @@ import { NextResponse } from 'next/server'
  *         description: Longitud del usuario
  *       - in: query
  *         name: page
- *         required: false
  *         schema:
  *           type: integer
  *           default: 1
  *         description: Número de página
  *     responses:
  *       200:
- *         description: Listado de comercios
+ *         description: Lista de comercios cercanos con ofertas
  *         content:
  *           application/json:
  *             schema:
@@ -38,35 +39,7 @@ import { NextResponse } from 'next/server'
  *                 data:
  *                   type: array
  *                   items:
- *                     type: object
- *                     properties:
- *                       id:
- *                         type: string
- *                         format: uuid
- *                       nombre:
- *                         type: string
- *                       direccion:
- *                         type: string
- *                       telefono:
- *                         type: string
- *                       horario:
- *                         type: string
- *                       imagen_url:
- *                         type: string
- *                       distancia:
- *                         type: number
- *                         description: Distancia en km
- *                       latitud:
- *                         type: number
- *                       longitud:
- *                         type: number
- *                       coordenadas:
- *                         type: object
- *                         properties:
- *                           lat:
- *                             type: number
- *                           lng:
- *                             type: number
+ *                     $ref: '#/components/schemas/ComercioCercano'
  *                 pagination:
  *                   type: object
  *                   properties:
@@ -83,7 +56,6 @@ import { NextResponse } from 'next/server'
  *       500:
  *         description: Error del servidor
  */
-
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url)
@@ -121,7 +93,8 @@ export async function GET(request: Request) {
         const supabase = await createClient()
 
         // Llamada a la función RPC de Supabase (PostGIS)
-        const { data, error } = await supabase.rpc('get_comercios_sorted_by_distance', {
+        // Esta función filtra por ofertas activas y fechas vigentes
+        const { data, error } = await supabase.rpc('get_comercios_con_ofertas_sorted_by_distance', {
             user_lat: lat,
             user_long: long,
             page_number: page,
@@ -129,17 +102,23 @@ export async function GET(request: Request) {
         })
 
         if (error) {
-            console.error('Error en RPC get_comercios_sorted_by_distance:', error)
+            console.error('Error en RPC get_comercios_con_ofertas_sorted_by_distance:', error)
+            
+            // Si el error es porque la función no existe, dar un mensaje más claro
+            if (error.code === 'PGRST202') { // Function not found
+                 return NextResponse.json(
+                    { error: 'La función de base de datos no ha sido inicializada. Por favor ejecute el script database/08_comercios_con_ofertas_cercanos.sql' },
+                    { status: 500 }
+                )
+            }
+
             return NextResponse.json(
-                { error: 'Error al obtener comercios cercanos', details: error.message },
+                { error: 'Error al obtener comercios con ofertas', details: error.message },
                 { status: 500 }
             )
         }
 
         // Procesar resultados y paginación
-        // Nota: La función RPC devuelve el total_count en cada fila.
-        // Si no hay datos, data es un array vacío.
-        
         let totalRecords = 0
         let formattedData = []
 
@@ -165,7 +144,6 @@ export async function GET(request: Request) {
         const totalPages = Math.ceil(totalRecords / pageSize)
 
         // Respuesta con Cache-Control headers
-        // Cacheamos por 60 segundos en CDN/Browser, y permitimos stale por 5 minutos
         return NextResponse.json(
             {
                 data: formattedData,
@@ -184,7 +162,7 @@ export async function GET(request: Request) {
         )
 
     } catch (error) {
-        console.error('Error interno en GET /api/comercios/cercanos:', error)
+        console.error('Error interno en GET /api/comercios/cercanos-con-ofertas:', error)
         return NextResponse.json(
             { error: 'Error interno del servidor' },
             { status: 500 }

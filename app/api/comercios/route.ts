@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/route'
+import { createClient, createClientWithToken } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
 
 /**
@@ -45,11 +45,22 @@ import { NextResponse } from 'next/server'
  */
 export async function POST(request: Request) {
     try {
-        const supabase = await createClient()
+        let supabase = await createClient()
         
-        // 1. Autenticación
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
-        if (authError || !user) {
+        // 1. Autenticación (Dual: Cookie o Bearer Token)
+        let { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) {
+            const authHeader = request.headers.get('authorization')
+            if (authHeader) {
+                const token = authHeader.replace('Bearer ', '')
+                supabase = await createClientWithToken(token)
+                const { data: { user: headerUser } } = await supabase.auth.getUser()
+                user = headerUser
+            }
+        }
+
+        if (!user) {
             return NextResponse.json(
                 { error: 'No autorizado. Debes iniciar sesión para crear un comercio.' },
                 { status: 401 }

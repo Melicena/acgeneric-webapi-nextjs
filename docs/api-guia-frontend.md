@@ -22,6 +22,132 @@ Esta guía resume todas las URLs disponibles bajo `"/api"` con ejemplos de uso d
 
 ---
 
+## /api/comercios
+Rutas para explorar y gestionar comercios.
+
+### GET /api/comercios/cercanos
+Obtiene comercios ordenados por cercanía a una ubicación.
+
+- Query:
+  - `latitud` (requerido): Latitud del usuario.
+  - `longitud` (requerido): Longitud del usuario.
+  - `page` (opcional, default 1): Paginación (20 por página).
+- Autenticación: No requerida.
+
+Ejemplo:
+```ts
+const res = await fetch('/api/comercios/cercanos?latitud=40.41&longitud=-3.70&page=1');
+const data = await res.json();
+```
+
+Respuesta típica:
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "nombre": "Restaurante Ejemplo",
+      "direccion": "Calle Falsa 123",
+      "telefono": "+34 600 000 000",
+      "horario": "L-D 10:00-22:00",
+      "imagen_url": "https://...",
+      "distancia": 0.5, // km
+      "latitud": 40.416,
+      "longitud": -3.703,
+      "coordenadas": { "lat": 40.416, "lng": -3.703 }
+    }
+  ],
+  "pagination": {
+    "total": 50,
+    "per_page": 20,
+    "current_page": 1,
+    "total_pages": 3
+  }
+}
+```
+
+### GET /api/comercios/cercanos-con-ofertas
+Similar a "cercanos", pero **solo devuelve comercios que tienen ofertas vigentes**.
+
+- Query: `latitud`, `longitud`, `page`
+- Autenticación: No requerida.
+
+Ejemplo:
+```ts
+const res = await fetch('/api/comercios/cercanos-con-ofertas?latitud=40.41&longitud=-3.70');
+```
+
+### GET /api/comercios/[id]
+Obtiene el detalle completo de un comercio.
+
+- Path: `id` (UUID del comercio)
+- Autenticación: No requerida.
+
+Ejemplo:
+```ts
+const res = await fetch('/api/comercios/uuid-comercio');
+```
+
+Respuesta típica:
+```json
+{
+  "id": "uuid",
+  "nombre": "Restaurante Ejemplo",
+  "descripcion": "...",
+  "direccion": "...",
+  "telefono": "...",
+  "horario": "...",
+  "latitud": 40.416,
+  "longitud": -3.703,
+  "imagen_url": "...",
+  "categorias": ["Restaurante"],
+  "is_approved": true
+}
+```
+
+### GET /api/comercios/seguidos
+Devuelve la lista de IDs de comercios que el usuario sigue.
+
+- Autenticación: **Requerida** (Bearer Token).
+
+Ejemplo:
+```ts
+const res = await fetch('/api/comercios/seguidos', {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+// Respuesta: ["uuid-1", "uuid-2"]
+```
+
+### POST /api/comercios/[id]/seguir
+Sigue a un comercio.
+
+- Path: `id` (UUID del comercio)
+- Autenticación: **Requerida**.
+
+Ejemplo:
+```ts
+await fetch('/api/comercios/uuid-comercio/seguir', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
+
+### DELETE /api/comercios/[id]/seguir
+Deja de seguir a un comercio.
+
+- Path: `id` (UUID del comercio)
+- Autenticación: **Requerida**.
+
+Ejemplo:
+```ts
+await fetch('/api/comercios/uuid-comercio/seguir', {
+  method: 'DELETE',
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
+
+---
+
 ## /api/ofertas
 Rutas para gestionar ofertas y promociones.
 
@@ -132,46 +258,6 @@ await fetch('/api/noticias', {
     descripcion: 'Aprovecha esta semana',
     imageUrl: 'https://.../banner.png',
     url: 'https://.../detalle'
-  })
-});
-```
-
----
-
-## /api/ofertas
-Rutas para gestionar ofertas.
-
-### GET /api/ofertas
-- Query:
-  - `nivel` (opcional)
-  - `limit` (opcional, por defecto `20`)
-- Autenticación: no obligatoria.
-
-Ejemplo `fetch`:
-```ts
-const res = await fetch('/api/ofertas?nivel=2&limit=10');
-const ofertas = await res.json();
-```
-
-### POST /api/ofertas
-- Body (JSON):
-  - Requeridos: `titulo`, `fechaFin`, `comercio`
-  - Opcionales: `descripcion`, `imageUrl`, `fechaInicio` (por defecto `now`), `nivelRequerido`
-- Autenticación: requiere usuario Supabase.
-
-Ejemplo `fetch`:
-```ts
-await fetch('/api/ofertas', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    titulo: '2x1 en café',
-    descripcion: 'Solo miércoles',
-    comercio: 'Cafetería Z',
-    fechaFin: '2025-12-31'
   })
 });
 ```
@@ -335,40 +421,3 @@ Respuesta típica:
 ## Notas adicionales
 - El backend usa Supabase Storage (bucket `avatars`) y Row Level Security en algunas operaciones. Usar siempre el token del usuario para operaciones sensibles.
 - Si se habilita `x-api-key`, añadirlo en las llamadas del backend-to-backend o en despliegues controlados.
-
----
-
-## /api/comercios/[id]/seguir
-Gestión de seguimiento de comercios.
-
-### POST /api/comercios/:id/seguir
-Permite al usuario autenticado seguir a un comercio.
-- Path param: `id` (UUID del comercio)
-- Autenticación: Requerida (Token Bearer).
-
-Ejemplo `fetch`:
-```ts
-await fetch('/api/comercios/uuid-comercio/seguir', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-});
-```
-
-### DELETE /api/comercios/:id/seguir
-Permite al usuario autenticado dejar de seguir a un comercio.
-- Path param: `id` (UUID del comercio)
-- Autenticación: Requerida (Token Bearer).
-
-Ejemplo `fetch`:
-```ts
-await fetch('/api/comercios/uuid-comercio/seguir', {
-  method: 'DELETE',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  }
-});
-```
-
-

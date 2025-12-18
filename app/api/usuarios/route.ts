@@ -172,6 +172,8 @@ export async function PUT(request: Request) {
         // Soporte para display_name (snake_case o camelCase)
         if (body.display_name !== undefined) updateData.display_name = body.display_name
         if (body.displayName !== undefined) updateData.display_name = body.displayName
+        // Permitir actualizar rol (precaución: RLS debe controlar permisos)
+        if (body.rol !== undefined) updateData.rol = body.rol
 
         if (Object.keys(updateData).length === 0) {
             return NextResponse.json(

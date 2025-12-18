@@ -57,6 +57,58 @@ paths:
                         nullable: true
         '500':
           description: Error del servidor
+  /api/comercios:
+    post:
+      summary: Crear un nuevo comercio
+      description: Crea un nuevo comercio con imagen y ubicación. Requiere autenticación.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - nombre
+                - direccion
+                - telefono
+                - latitud
+                - longitud
+                - imagen
+              properties:
+                nombre:
+                  type: string
+                descripcion:
+                  type: string
+                telefono:
+                  type: string
+                direccion:
+                  type: string
+                latitud:
+                  type: number
+                longitud:
+                  type: number
+                categorias:
+                  type: array
+                  items:
+                    type: string
+                imagen:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Comercio creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comercio'
+        '400':
+          description: Datos inválidos
+        '401':
+          description: No autorizado
+        '500':
+          description: Error del servidor
   /api/comercios/{id}:
     get:
       summary: Obtener un comercio por ID
@@ -257,6 +309,29 @@ paths:
                         type: integer
         '400':
           description: Parámetros inválidos
+        '500':
+          description: Error del servidor
+  /api/comercios/seguir/{id}:
+    post:
+      summary: Seguir a un comercio
+      description: Permite a un usuario autenticado seguir a un comercio para recibir sus ofertas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del comercio a seguir
+      responses:
+        '200':
+          description: Comercio seguido exitosamente
+        '401':
+          description: No autorizado
+        '404':
+          description: Comercio no encontrado
         '500':
           description: Error del servidor
 components:

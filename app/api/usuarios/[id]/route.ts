@@ -1,5 +1,19 @@
-import { createClient } from '@/lib/supabase/route'
+import { createClient, createClientWithToken } from '@/lib/supabase/route'
 import { NextResponse } from 'next/server'
+
+async function getAuthenticatedClient(request: Request) {
+    let supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        const authHeader = request.headers.get('authorization')
+        if (authHeader) {
+            const token = authHeader.replace('Bearer ', '')
+            supabase = await createClientWithToken(token)
+        }
+    }
+    return supabase
+}
 
 /**
  * GET /api/usuarios/[id]
@@ -11,7 +25,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
+        const supabase = await getAuthenticatedClient(request)
         const { id } = await params
 
         if (!id) {
@@ -57,7 +71,7 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
+        const supabase = await getAuthenticatedClient(request)
         const { id } = await params
         const body = await request.json()
 
@@ -90,7 +104,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const supabase = await createClient()
+        const supabase = await getAuthenticatedClient(request)
         const { id } = await params
 
         if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
